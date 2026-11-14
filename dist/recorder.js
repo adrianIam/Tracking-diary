@@ -1,5 +1,5 @@
 // One press owns a recording. Only its matching release can complete it.
-export function createHoldRecorder({button,onStart,onComplete,onCancel,clock=Date.now,keyboardTarget=window,lifecycleTarget=window,visibilityTarget=document}) {
+export function createHoldRecorder({button,onStart,onComplete,onCancel,clock=Date.now,lifecycleTarget=window,visibilityTarget=document}) {
   let active=null;
   const listeners=[];
   const listen=(target,type,fn)=>{target.addEventListener(type,fn);listeners.push(()=>target.removeEventListener(type,fn));};
@@ -20,9 +20,6 @@ export function createHoldRecorder({button,onStart,onComplete,onCancel,clock=Dat
   listen(button,'pointercancel',e=>{if(active?.pointerId===e.pointerId)end(true);});
   listen(button,'lostpointercapture',e=>{if(active?.pointerId===e.pointerId)end(true);});
   listen(button,'contextmenu',e=>e.preventDefault());
-  listen(button,'keydown',e=>{if(![' ','Enter'].includes(e.key))return;e.preventDefault();if(!e.repeat)begin({key:e.key});});
-  listen(keyboardTarget,'keyup',e=>{if(active?.key===e.key){e.preventDefault();end();}});
-  listen(keyboardTarget,'keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();end(true);}});
   listen(lifecycleTarget,'blur',()=>end(true));
   listen(visibilityTarget,'visibilitychange',()=>{if(visibilityTarget.hidden)end(true);});
   return {cancel:()=>end(true),destroy:()=>{listeners.forEach(remove=>remove());end(true);}};

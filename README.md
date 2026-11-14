@@ -1,6 +1,6 @@
 # Tracking Diary
 
-A minimal, responsive headache and migraine diary. The default **Record** tab has one hold-to-record button: press and hold for each burst of pain. Each release appends its exact interval to the current session without opening a form. Press **Add details & save** when finished to choose headache or migraine and a severity, then save all bursts as one episode. Pain-free gaps are excluded from total pain duration. Other details and timing adjustments are optional. Mouse, touch, Space, and Enter are supported; interrupted holds are cancelled. Released bursts stay available until the session is submitted or discarded during the current visit; drafts are not retained after a page reload. Nothing is saved until you submit. Quick logging comes first: the start time is filled in automatically, severity is one tap, and duration presets log completed episodes ending now. Ongoing episodes keep their timestamps across reloads and can be ended later.
+A minimal, responsive headache and migraine diary. The default **Record** tab has one hold-to-record button: press and hold for each burst of pain. Each release appends its exact interval to the current session without opening a form. Press **Add details & save** when finished to choose headache or migraine and a severity, then save all bursts as one episode. Pain-free gaps are excluded from total pain duration. Other details and timing adjustments are optional. Mouse and touch are supported; interrupted holds are cancelled. Released bursts stay available until the session is submitted or discarded during the current visit; drafts are not retained after a page reload. Nothing is saved until you submit. Quick logging comes first: the start time is filled in automatically, severity is one tap, and duration presets log completed episodes ending now. Ongoing episodes keep their timestamps across reloads and can be ended later.
 
 ## Features
 
@@ -10,6 +10,8 @@ A minimal, responsive headache and migraine diary. The default **Record** tab ha
 - Optional triggers, symptoms, relief, medication / dose, activity impact, and notes.
 - Search and type / date filters, editing, deletion with undo.
 - Descriptive summaries for 30, 90, or 365 days; printable episode details.
+- Stacked duration chart for the last 30 local calendar days, with intensity colours and pain-free gaps excluded.
+- Stacked hourly onset frequency for the selected period: each burst counts once; manual episodes count once at their start. Both charts include accessible data tables.
 - CSV export and versioned JSON backup / merge import.
 - Offline app-shell caching and an installable web manifest where supported.
 - No analytics, external fonts, runtime dependencies, or server upload of diary records.
@@ -44,7 +46,7 @@ dist/
   style.css            Responsive layout and print styles
   app.js               Views, form interactions, local persistence adapter
   model.js             Record validation, calculations, backups and CSV
-  recorder.js          Pointer / keyboard hold lifecycle and precise timer display
+  recorder.js          Pointer hold lifecycle and precise timer display
   sw.js                App-shell caching (no health records)
   manifest.webmanifest Home-screen metadata
   icon.svg             Local app icon
@@ -67,4 +69,4 @@ GitHub Pages publishes a root redirect and the app at `dist/` automatically from
 
 ## Verification
 
-`npm test` also covers precise pointer/keyboard holds, repeated keys, multi-pointer input, cancellation on interruption, and late release protection. `npm test` covers ongoing duration, invalid timing, backup round trips, invalid imports, merge conflict handling, CSV escaping, and summary calculations. JavaScript syntax checks are also run. The local preview relay is unavailable; browser smoke checks run against the deployed Pages app. Burst-specific checks cover grouping, exact durations without gaps, version 1 compatibility, backup/merge preservation, CSV output and invalid intervals.
+`npm test` also covers precise pointer holds, multi-pointer input, cancellation on interruption, and late release protection. `npm test` covers ongoing duration, invalid timing, backup round trips, invalid imports, merge conflict handling, CSV escaping, and summary calculations. JavaScript syntax checks are also run. The local preview relay is unavailable; browser smoke checks run against the deployed Pages app. Burst-specific checks cover grouping, exact durations without gaps, version 1 compatibility, backup/merge preservation, CSV output and invalid intervals.
