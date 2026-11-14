@@ -34,10 +34,10 @@ test('frequency defaults to all past records, including entries older than a yea
  assert.equal(chartData(e,now).timeBuckets[27].values[2],1);
  assert.equal(chartData(e,now,'year').timeBuckets[27].values[2],0);
  assert.ok(renderInsightCharts(e,undefined,now).includes('value="all" selected'));
- assert.deepEqual(FREQUENCY_RANGES.map(r=>r[0]),['all','year','6months','30','14','7']);
+ assert.deepEqual(FREQUENCY_RANGES.map(r=>r[0]),['all','year','6months','90','30','14','7']);
 });
 test('day windows include their first local midnight and exclude earlier starts',()=>{
- for(const days of [7,14,30]){
+ for(const days of [7,14,30,90]){
   const cutoff=frequencyStart(String(days),now);const before=new Date(+cutoff-1);
   const e=[{severity:1,startedAt:cutoff.toISOString(),endedAt:cutoff.toISOString()},{severity:2,startedAt:before.toISOString(),endedAt:before.toISOString()}];
   const rows=chartData(e,now,String(days)).timeBuckets;
@@ -49,4 +49,14 @@ test('calendar month/year ranges clamp dates and do not change the fixed 30-day 
  const leap=frequencyStart('year',new Date(2024,1,29,12));assert.equal(leap.getFullYear(),2023);assert.equal(leap.getMonth(),1);assert.equal(leap.getDate(),28);
  const e=[{severity:1,startedAt:iso(13,10),endedAt:iso(13,11)}];
  assert.deepEqual(chartData(e,now,'all').days,chartData(e,now,'7').days);
+});
+
+test('duration chart matches all summary ranges while frequency keeps its own range',()=>{
+ const e=[{severity:1,startedAt:iso(-20,9),endedAt:iso(-20,10)}];
+ for(const days of [30,90,365]){
+  const data=chartData(e,now,'all',days);assert.equal(data.days.length,days);
+  assert.equal(data.days.reduce((n,d)=>n+d.values[0],0),days===30?0:3600);
+  const html=renderInsightCharts(e,'all',now,days);assert.ok(html.includes(`Pain duration · last ${days} days`));assert.ok(html.includes('value="all" selected'));
+ }
+ assert.deepEqual(chartData(e,now,'90',90).timeBuckets,chartData(e,now,'90',365).timeBuckets);
 });

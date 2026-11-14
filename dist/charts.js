@@ -1,6 +1,6 @@
 const COLORS=['#91aa70','#d3aa6c','#ba8589'];
 const NAMES=['Mild','Moderate','Severe'];
-export const FREQUENCY_RANGES=[['all','All records'],['year','1 year'],['6months','6 months'],['30','30 days'],['14','14 days'],['7','7 days']];
+export const FREQUENCY_RANGES=[['all','All records'],['year','1 year'],['6months','6 months'],['90','90 days'],['30','30 days'],['14','14 days'],['7','7 days']];
 export function frequencyStart(range,now){
   if(range==='all')return null;
   const start=new Date(now);start.setHours(0,0,0,0);
@@ -13,10 +13,10 @@ export function frequencyStart(range,now){
 }
 const dayKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const shortDate=d=>new Intl.DateTimeFormat(undefined,{day:'numeric',month:'short'}).format(d);
-export function chartData(entries,now=new Date(),frequencyRange='all'){
+export function chartData(entries,now=new Date(),frequencyRange='all',durationDays=30){
   const today=new Date(now);today.setHours(0,0,0,0);
-  const dates=Array.from({length:31},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()-29+i);return d;});
-  const days=dates.slice(0,30).map(d=>({key:dayKey(d),label:shortDate(d),values:[0,0,0]}));
+  const dates=Array.from({length:durationDays+1},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()-(durationDays-1)+i);return d;});
+  const days=dates.slice(0,durationDays).map(d=>({key:dayKey(d),label:shortDate(d),values:[0,0,0]}));
   const clockLabel=minutes=>`${String(Math.floor(minutes/60)).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
   const timeBuckets=Array.from({length:72},(_,index)=>({startLabel:clockLabel(index*20),label:`${clockLabel(index*20)}–${clockLabel((index+1)*20)}`,values:[0,0,0]}));
   const since=frequencyStart(frequencyRange,now);
@@ -48,13 +48,13 @@ function stackedChart(rows,{id,title,subtitle,frequency=false,frequencyRange='al
   rows.forEach((r,i)=>{
     let baseline=H-B;const x=L+bucket*i+bucket*.16;
     r.values.forEach((raw,level)=>{const value=raw/divisor,h=value/top*plotH;if(h>0){marks+=`<rect x="${x}" y="${baseline-h}" width="${bucket*.68}" height="${h}" fill="${COLORS[level]}"><title>${esc(`${r.label} · ${NAMES[level]}: ${number(value)} ${unit.toLowerCase()}`)}</title></rect>`;baseline-=h;}});
-    const show=frequency?i%6===0:i%5===0||i===rows.length-1;
+    const show=frequency?i%6===0:i%Math.ceil(rows.length/6)===0||i===rows.length-1;
     if(show)marks+=`<text x="${L+bucket*(i+.5)}" y="${H-B+20}" text-anchor="middle">${esc(frequency?r.startLabel:r.label)}</text>`;
   });
   const table=`<details class="chart-data"><summary>View chart data</summary><div class="chart-table-wrap"><table><caption>${esc(title)} (${unit.toLowerCase()})</caption><thead><tr><th scope="col">${frequency?'20-minute interval':'Date'}</th>${NAMES.map(n=>`<th scope="col">${n}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><th scope="row">${esc(r.label)}</th>${r.values.map(v=>`<td>${number(v/divisor)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;
-  return `<article class="content-card chart-card"><div class="chart-heading"><h3>${title}</h3>${frequency?`<label class="chart-range-label">Time range<select id="frequency-period" class="period-select" aria-label="Time-of-day chart range">${FREQUENCY_RANGES.map(([value,label])=>`<option value="${value}" ${String(frequencyRange)===value?'selected':''}>${label}</option>`).join('')}</select></label>`:''}</div><p>${subtitle}</p><div class="chart-legend">${NAMES.map((n,i)=>`<span><i style="background:${COLORS[i]}"></i>${n}</span>`).join('')}</div><span class="chart-unit">${unit}</span><div class="chart-scroll"><svg class="insight-chart" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${id}-title ${id}-desc"><title id="${id}-title">${esc(title)}</title><desc id="${id}-desc">${esc(subtitle)} Columns stack mild, moderate and severe intensity. Exact values are available in the data table.</desc>${marks}</svg></div><p class="chart-axis">${frequency?'Time of day · 20-minute intervals (local time)':'Date (local time)'}</p>${max===0?'<p class="info-note">No recorded pain in this period yet.</p>':''}${table}</article>`;
+  return `<article class="content-card chart-card"><div class="chart-heading"><h3>${title}</h3>${frequency?`<label class="chart-range-label">Time range<select id="frequency-period" class="period-select" aria-label="Time-of-day chart range">${FREQUENCY_RANGES.map(([value,label])=>`<option value="${value}" ${String(frequencyRange)===value?'selected':''}>${label}</option>`).join('')}</select></label>`:''}</div><p>${subtitle}</p><div class="chart-legend">${NAMES.map((n,i)=>`<span><i style="background:${COLORS[i]}"></i>${n}</span>`).join('')}</div><span class="chart-unit">${unit}</span><div class="chart-scroll"><svg class="insight-chart" style="--chart-min-width:${Math.max(560,rows.length*3)}px" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="${id}-title ${id}-desc"><title id="${id}-title">${esc(title)}</title><desc id="${id}-desc">${esc(subtitle)} Columns stack mild, moderate and severe intensity. Exact values are available in the data table.</desc>${marks}</svg></div><p class="chart-axis">${frequency?'Time of day · 20-minute intervals (local time)':'Date (local time)'}</p>${max===0?'<p class="info-note">No recorded pain in this period yet.</p>':''}${table}</article>`;
 }
-export function renderInsightCharts(entries,frequencyRange='all',now=new Date()){
- const {days,timeBuckets}=chartData(entries,now,frequencyRange);
- return stackedChart(days,{id:'daily-duration',title:'Pain duration · last 30 days',subtitle:'Total pain time each day, stacked by intensity. Gaps between bursts are excluded.'})+stackedChart(timeBuckets,{id:'time-frequency',title:'Pain frequency · 20-minute intervals',subtitle:`${frequencyRange==='all'?'All past records':'Past '+(FREQUENCY_RANGES.find(([value])=>value===String(frequencyRange))?.[1]||frequencyRange+' days')}. Each recorded burst counts once in its start-time interval; a manual episode counts once at its start.`,frequency:true,frequencyRange});
+export function renderInsightCharts(entries,frequencyRange='all',now=new Date(),durationDays=30){
+ const {days,timeBuckets}=chartData(entries,now,frequencyRange,durationDays);
+ return stackedChart(days,{id:'daily-duration',title:`Pain duration · last ${durationDays} days`,subtitle:'Total pain time each day, stacked by intensity. Gaps between bursts are excluded.'})+stackedChart(timeBuckets,{id:'time-frequency',title:'Pain frequency · 20-minute intervals',subtitle:`${frequencyRange==='all'?'All past records':'Past '+(FREQUENCY_RANGES.find(([value])=>value===String(frequencyRange))?.[1]||frequencyRange+' days')}. Each recorded burst counts once in its start-time interval; a manual episode counts once at its start.`,frequency:true,frequencyRange});
 }

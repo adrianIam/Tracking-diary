@@ -1,72 +1,62 @@
-# Tracking Diary
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {chartData,renderInsightCharts,frequencyStart,FREQUENCY_RANGES} from '../dist/charts.js';
+const now=new Date(2026,10,14,15);
+const iso=(day,h=0,m=0,s=0)=>new Date(2026,10,day,h,m,s).toISOString();
+test('duration splits across midnight and stacks intensity without burst gaps',()=>{
+ const entries=[{severity:1,startedAt:iso(13,23,59),endedAt:iso(14,0,1)},{severity:3,bursts:[{startedAt:iso(14,10),endedAt:iso(14,10,0,2)},{startedAt:iso(14,11),endedAt:iso(14,11,0,3)}]}];
+ const {days,timeBuckets}=chartData(entries,now);assert.equal(days.length,30);assert.equal(timeBuckets.length,72);
+ assert.deepEqual(days.at(-2).values,[60,0,0]);assert.deepEqual(days.at(-1).values,[60,0,5]);
+ assert.equal(timeBuckets[71].values[0],1);assert.equal(timeBuckets[30].values[2],1);assert.equal(timeBuckets[33].values[2],1);
+});
+test('calendar window excludes earlier onsets and future dates; ongoing pain clips at now',()=>{
+ const {days,timeBuckets}=chartData([{severity:2,startedAt:iso(14,14),endedAt:null},{severity:1,startedAt:iso(15),endedAt:iso(15,1)},{severity:3,startedAt:iso(-20),endedAt:iso(-20,1)}],now,30);
+ assert.deepEqual(days.at(-1).values,[0,3600,0]);assert.equal(timeBuckets[42].values[1],1);assert.equal(timeBuckets.reduce((n,r)=>n+r.values.reduce((a,b)=>a+b,0),0),1);
+});
+test('frequency stacks starts by local 20-minute interval and uses the selected calendar period',()=>{
+ const e=[{severity:1,startedAt:iso(14,9),endedAt:iso(14,10)},{severity:2,startedAt:iso(14,9),endedAt:iso(14,10)},{severity:3,startedAt:iso(-20,9),endedAt:iso(-20,10)}];
+ assert.deepEqual(chartData(e,now,30).timeBuckets[27].values,[1,1,0]);assert.deepEqual(chartData(e,now,90).timeBuckets[27].values,[1,1,1]);
+});
+test('empty charts retain labelled axes, intensity legend and accessible data tables',()=>{const html=renderInsightCharts([],30,now);assert.equal((html.match(/role="img"/g)||[]).length,2);assert.ok(html.includes('View chart data'));assert.ok(html.includes('No recorded pain'));assert.ok(!html.includes('NaN'));});
 
-A minimal, responsive headache and migraine diary. The default **Record** tab has one hold-to-record button: press and hold for each burst of pain. Each release appends its exact interval to the current session without opening a form. Press **Add details & save** when finished to choose headache or migraine and a severity, then save all bursts as one episode. Pain-free gaps are excluded from total pain duration. Other details and timing adjustments are optional. Mouse and touch are supported; interrupted holds are cancelled. Released bursts stay available until the session is submitted or discarded during the current visit; drafts are not retained after a page reload. Nothing is saved until you submit. Quick logging comes first: the start time is filled in automatically, severity is one tap, and duration presets log completed episodes ending now. Ongoing episodes keep their timestamps across reloads and can be ended later.
+test('20-minute boundaries use start-inclusive, end-exclusive buckets across all 24 hours',()=>{
+ const times=[[0,19,59],[0,20,0],[0,39,59],[0,40,0],[0,59,59],[1,0,0],[23,59,59]];
+ const entries=times.map(([h,m,s])=>({severity:1,startedAt:iso(13,h,m,s),endedAt:iso(14)}));
+ const {timeBuckets}=chartData(entries,now);
+ assert.equal(timeBuckets.length,72);
+ assert.equal(timeBuckets[0].label,'00:00–00:20');assert.equal(timeBuckets[71].label,'23:40–24:00');
+ assert.deepEqual([0,1,2,3,71].map(i=>timeBuckets[i].values[0]),[1,2,2,1,1]);
+ assert.equal(timeBuckets.reduce((n,r)=>n+r.values[0],0),times.length);
+});
 
-## Features
+test('frequency defaults to all past records, including entries older than a year',()=>{
+ const old=new Date(2020,0,1,9).toISOString();const e=[{severity:3,startedAt:old,endedAt:old}];
+ assert.equal(chartData(e,now).timeBuckets[27].values[2],1);
+ assert.equal(chartData(e,now,'year').timeBuckets[27].values[2],0);
+ assert.ok(renderInsightCharts(e,undefined,now).includes('value="all" selected'));
+ assert.deepEqual(FREQUENCY_RANGES.map(r=>r[0]),['all','year','6months','90','30','14','7']);
+});
+test('day windows include their first local midnight and exclude earlier starts',()=>{
+ for(const days of [7,14,30,90]){
+  const cutoff=frequencyStart(String(days),now);const before=new Date(+cutoff-1);
+  const e=[{severity:1,startedAt:cutoff.toISOString(),endedAt:cutoff.toISOString()},{severity:2,startedAt:before.toISOString(),endedAt:before.toISOString()}];
+  const rows=chartData(e,now,String(days)).timeBuckets;
+  assert.equal(rows.reduce((n,r)=>n+r.values[0],0),1);assert.equal(rows.reduce((n,r)=>n+r.values[1],0),0);
+ }
+});
+test('calendar month/year ranges clamp dates and do not change the fixed 30-day duration series',()=>{
+ assert.equal(frequencyStart('6months',new Date(2026,9,31,12)).getDate(),30);
+ const leap=frequencyStart('year',new Date(2024,1,29,12));assert.equal(leap.getFullYear(),2023);assert.equal(leap.getMonth(),1);assert.equal(leap.getDate(),28);
+ const e=[{severity:1,startedAt:iso(13,10),endedAt:iso(13,11)}];
+ assert.deepEqual(chartData(e,now,'all').days,chartData(e,now,'7').days);
+});
 
-- Headache / migraine entries with the RCH diary’s three severity levels.
-- Automatic local timestamps; editable start and end times; ongoing episodes.
-- Quick durations: 15 minutes, 30 minutes, 1 hour, 2 hours, 4 hours, or custom.
-- Optional triggers, symptoms, relief, medication / dose, activity impact, and notes.
-- Search and type / date filters, editing, deletion with undo.
-- Descriptive summaries for 30, 90, or 365 days; printable episode details.
-- Stacked duration chart for the last 30 local calendar days, with intensity colours and pain-free gaps excluded.
-- Stacked onset frequency in 72 twenty-minute buckets covering the full day. Its independent range defaults to all records and offers 1 year, 6 months, 30 days, 14 days and 7 days: each burst counts once; manual episodes count once at their start. Both charts include accessible data tables.
-- CSV export and versioned JSON backup / merge import.
-- Offline app-shell caching and an installable web manifest where supported.
-- No analytics, external fonts, runtime dependencies, or server upload of diary records.
-
-## Run locally
-
-Use Node.js 20+ for tests:
-
-```sh
-npm test
-```
-
-Serve `dist/` with any static HTTP server, for example:
-
-```sh
-python3 -m http.server 8080 --directory dist
-```
-
-Open `http://localhost:8080`. There is no build or dependency installation step. Service workers require localhost or HTTPS. Offline support must be verified on the final host; authenticated hosts can impose additional constraints.
-
-## Privacy and data ownership
-
-Entries are saved to `localStorage` under `tracking-diary:v1` on the current browser profile and origin. They do **not** sync across devices. Clearing browser data can delete them; switching app addresses or browsers creates a separate diary. This is not encrypted storage: people with access to the same browser profile may be able to read entries. Export backups regularly. Backups and CSV files contain health information and should be stored privately. This is an observation journal, not diagnostic or treatment software.
-
-Imports validate the schema and entries before any write, merge by stable ID, and keep the entry with the newest `updatedAt` value. Multiple ongoing episodes and invalid timing are rejected. Invalid existing storage is preserved for recovery instead of silently overwritten. Cross-tab changes refresh the diary and close stale editing forms. CSV fields escape quotes, line breaks, and formula-leading characters.
-
-## Structure and future trackers
-
-```text
-dist/
-  index.html           Accessible app shell and entry form
-  style.css            Responsive layout and print styles
-  app.js               Views, form interactions, local persistence adapter
-  model.js             Record validation, calculations, backups and CSV
-  recorder.js          Pointer hold lifecycle and precise timer display
-  sw.js                App-shell caching (no health records)
-  manifest.webmanifest Home-screen metadata
-  icon.svg             Local app icon
-tests/model.test.js    Timing, imports, merge, CSV and summary checks
-```
-
-The current envelope is `{ schemaVersion: 2, entries: [...] }`. Version 1 data and backups are still accepted without losing existing entries. The local storage key remains unchanged. Each record has shared `id`, `trackerType`, `startedAt`, `endedAt`, `createdAt` and `updatedAt` metadata. This version implements `trackerType: "headache"` with `kind: "headache" | "migraine"`, severity 1–3, and category-specific observations. Recorded sessions also retain a `bursts` array of exact `{ startedAt, endedAt }` intervals. The outer start/end mark the first and last bursts, while duration is the sum of the individual intervals. Burst sessions keep their timings intact when editing shared details. JSON backups preserve the array; CSV includes burst count, intervals, total pain duration and overall session span.
-
-To add a new category, introduce a tracker definition with its form fields, validation, and summary behavior, and route it using `trackerType`. Keep shared timing and persistence code reusable. Unsupported categories are deliberately rejected by the current importer; introduce a version migration when adding new record shapes rather than silently dropping fields. A later cloud persistence adapter can replace the local adapter without changing episode IDs or timestamps. Cross-device sync should add authentication, per-user authorization, conflict handling, and deletion handling as an explicit follow-up.
-
-Average duration uses completed episodes only and excludes gaps within burst sessions. Each saved session counts as one episode. “Days with a headache” counts distinct local dates on which episodes **started**, rather than every date a multi-day episode overlaps. Trigger counts describe recorded observations and do not infer causation.
-
-## Reference
-
-The form’s severity guide and base observations were informed by the [Royal Children’s Hospital Headache Diary](https://www.rch.org.au/uploadedfiles/main/content/clinicalguide/headachediary.pdf). Duration shortcuts, local digital storage, symptoms, backups, and summaries extend that paper format. No personal or sample health records are included in the repository.
-
-## Deployment
-
-GitHub Pages publishes a root redirect and the app at `dist/` automatically from `main` through `.github/workflows/pages.yml`. All asset paths and service-worker scope are relative for repository-subpath hosting. Host the contents of `dist/` on any HTTPS static host. The `.openai/hosting.json` file configures the private Sites deployment for this project. Changing the deployment origin does not move browser-local entries; export and import a backup when migrating.
-
-## Verification
-
-`npm test` also covers precise pointer holds, multi-pointer input, cancellation on interruption, and late release protection. `npm test` covers ongoing duration, invalid timing, backup round trips, invalid imports, merge conflict handling, CSV escaping, and summary calculations. JavaScript syntax checks are also run. The local preview relay is unavailable; browser smoke checks run against the deployed Pages app. Burst-specific checks cover grouping, exact durations without gaps, version 1 compatibility, backup/merge preservation, CSV output and invalid intervals.
+test('duration chart matches all summary ranges while frequency keeps its own range',()=>{
+ const e=[{severity:1,startedAt:iso(-20,9),endedAt:iso(-20,10)}];
+ for(const days of [30,90,365]){
+  const data=chartData(e,now,'all',days);assert.equal(data.days.length,days);
+  assert.equal(data.days.reduce((n,d)=>n+d.values[0],0),days===30?0:3600);
+  const html=renderInsightCharts(e,'all',now,days);assert.ok(html.includes(`Pain duration · last ${days} days`));assert.ok(html.includes('value="all" selected'));
+ }
+ assert.deepEqual(chartData(e,now,'90',90).timeBuckets,chartData(e,now,'90',365).timeBuckets);
+});
