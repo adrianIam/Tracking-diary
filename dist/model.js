@@ -1,8 +1,22 @@
 export const STORAGE_KEY = 'tracking-diary:v1';
+export const SCHEMA_VERSION = 2;
 export const TYPES = [{id:'headache', label:'Headache'}, {id:'migraine', label:'Migraine'}];
 export const SEVERITIES = {1:'Mild',2:'Moderate',3:'Severe'};
-export function durationMinutes(entry, now=Date.now()) {
-  return Math.max(0, Math.round(((entry.endedAt ? Date.parse(entry.endedAt) : now) - Date.parse(entry.startedAt))/60000));
+export function durationMs(entry, now=Date.now()) {
+  if (Array.isArray(entry.bursts)) return entry.bursts.reduce((total,b)=>total+Math.max(0,Date.parse(b.endedAt)-Date.parse(b.startedAt)),0);
+  return Math.max(0,(entry.endedAt ? Date.parse(entry.endedAt) : now)-Date.parse(entry.startedAt));
+}
+export function durationMinutes(entry, now=Date.now()) { return Math.round(durationMs(entry,now)/60000); }
+export function createBurstSession(bursts, now=Date.now()) {
+  if(!Array.isArray(bursts)||!bursts.length||bursts.length>10000) throw new Error('A session needs between 1 and 10,000 bursts.');
+  let previousEnd=-Infinity;
+  const copy=bursts.map(b=>{
+    const start=Date.parse(b?.startedAt),end=Date.parse(b?.endedAt);
+    if(!Number.isFinite(start)||!Number.isFinite(end)||end<start||end>now+60000||start<previousEnd) throw new Error('Burst times must be valid, in order, and must not overlap.');
+    previousEnd=end;
+    return {startedAt:new Date(start).toISOString(),endedAt:new Date(end).toISOString()};
+  });
+  return {startedAt:copy[0].startedAt,endedAt:copy.at(-1).endedAt,bursts:copy};
 }
 export function formatDuration(minutes) {
   if (minutes < 60) return `${minutes}m`;
@@ -21,12 +35,18 @@ export function validateEntry(e, now=Date.now()) {
   }
   for (const key of ['notes','medication','impact']) if(typeof e[key]!=='string'||e[key].length>10000) throw new Error(`Invalid ${key}.`);
   if (!Number.isFinite(Date.parse(e.createdAt)) || !Number.isFinite(Date.parse(e.updatedAt))) throw new Error('Invalid record timestamps.');
+  let session;
+  if(e.bursts!==undefined){
+    session=createBurstSession(e.bursts,now);
+    if(start!==Date.parse(session.startedAt)||end!==Date.parse(session.endedAt)) throw new Error('Session start and end must match its first and last bursts.');
+  }
   // Whitelist fields so imports cannot smuggle application state into records.
-  return Object.fromEntries(['id','trackerType','kind','severity','startedAt','endedAt','triggers','symptoms','relief','notes','medication','impact','createdAt','updatedAt'].map(k=>[k,e[k]]));
+  const clean=Object.fromEntries(['id','trackerType','kind','severity','startedAt','endedAt','triggers','symptoms','relief','notes','medication','impact','createdAt','updatedAt'].map(k=>[k,e[k]]));
+  return session ? {...clean,bursts:session.bursts} : clean;
 }
 export function parseBackup(text, now=Date.now()) {
   const data=JSON.parse(text);
-  if(data.schemaVersion!==1 || !Array.isArray(data.entries) || data.entries.length>20000) throw new Error('Choose a valid Tracking Diary version 1 backup.');
+  if(!data || ![1,SCHEMA_VERSION].includes(data.schemaVersion) || !Array.isArray(data.entries) || data.entries.length>20000) throw new Error('Choose a valid Tracking Diary version 1 or 2 backup.');
   const entries=data.entries.map(e=>validateEntry(e,now));
   if(new Set(entries.map(e=>e.id)).size!==entries.length) throw new Error('This backup contains duplicate IDs.');
   if(entries.filter(e=>e.endedAt===null).length>1) throw new Error('Only one episode can be ongoing.');
@@ -41,8 +61,8 @@ export function mergeEntries(current, incoming) {
 }
 export function toCSV(entries) {
   const cell=v=>`"${String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')}"`;
-  const rows=[['Type','Start (ISO)','End (ISO)','Duration (minutes)','Severity (1–3)','Triggers','Symptoms','Relief','Medication / dose','Activity impact','Notes']];
-  entries.forEach(e=>rows.push([e.kind,e.startedAt,e.endedAt,e.endedAt ? Number(((Date.parse(e.endedAt)-Date.parse(e.startedAt))/60000).toFixed(4)) : '',e.severity,e.triggers.join('; '),e.symptoms.join('; '),e.relief.join('; '),e.medication,e.impact,e.notes]));
+  const rows=[['Type','Start (ISO)','End (ISO)','Duration (minutes)','Severity (1–3)','Triggers','Symptoms','Relief','Medication / dose','Activity impact','Notes','Burst count','Burst intervals (ISO)','Session span (minutes)']];
+  entries.forEach(e=>rows.push([e.kind,e.startedAt,e.endedAt,e.endedAt ? Number((durationMs(e)/60000).toFixed(4)) : '',e.severity,e.triggers.join('; '),e.symptoms.join('; '),e.relief.join('; '),e.medication,e.impact,e.notes,e.bursts?.length??'',e.bursts?JSON.stringify(e.bursts):'',e.endedAt?Number(((Date.parse(e.endedAt)-Date.parse(e.startedAt))/60000).toFixed(4)):'']));
   return rows.map(r=>r.map(cell).join(',')).join('\r\n');
 }
 export function summarise(entries, since, now=Date.now()) {
@@ -50,5 +70,5 @@ export function summarise(entries, since, now=Date.now()) {
   const days=new Set(list.map(e=>new Date(e.startedAt).toLocaleDateString('en-CA'))).size;
   const completed=list.filter(e=>e.endedAt);
   const counts=new Map(); list.forEach(e=>e.triggers.forEach(t=>counts.set(t,(counts.get(t)||0)+1)));
-  return {list,days,completed,avgMinutes:completed.length?Math.round(completed.reduce((n,e)=>n+durationMinutes(e),0)/completed.length):null,topTriggers:[...counts].sort((a,b)=>b[1]-a[1]).slice(0,5)};
+  return {list,days,completed,avgMinutes:completed.length?Math.round(completed.reduce((n,e)=>n+durationMs(e),0)/completed.length/60000):null,topTriggers:[...counts].sort((a,b)=>b[1]-a[1]).slice(0,5)};
 }

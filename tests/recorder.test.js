@@ -17,3 +17,16 @@ test('pointer cancellation, lost capture, blur and hidden tab cancel without cre
 test('Escape and controller teardown cancel active holds and allow no late save',()=>{for(const reason of ['escape','destroy']){const t=setup();event(t.button,'keydown',{key:' ',repeat:false});t.advance(1000);if(reason==='escape')event(t.keys,'keydown',{key:'Escape'});else t.controller.destroy();event(t.keys,'keyup',{key:' '});assert.equal(t.completed.length,0);assert.equal(t.cancelled,1);}});
 test('right click and disabled controls do not begin recording',()=>{const t=setup();event(t.button,'pointerdown',{pointerId:1,button:2});t.button.disabled=true;event(t.button,'keydown',{key:' ',repeat:false});assert.equal(t.started.length,0);});
 test('duration display handles fractions and hour boundaries',()=>{assert.equal(formatHeldTime(2350),'00:02.3');assert.equal(formatHeldTime(60000),'01:00.0');assert.equal(formatHeldTime(3600100),'1:00:00.1');});
+
+test('sequential holds capture distinct intervals and cancelled holds leave earlier bursts intact',()=>{
+ const t=setup();
+ event(t.button,'pointerdown',{pointerId:1,button:0});t.advance(1200);event(t.button,'pointerup',{pointerId:1});
+ t.advance(5000);
+ event(t.button,'pointerdown',{pointerId:2,button:0});t.advance(500);event(t.button,'pointercancel',{pointerId:2});
+ t.advance(1000);
+ event(t.button,'keydown',{key:' ',repeat:false});t.advance(2300);event(t.keys,'keyup',{key:' '});
+ assert.equal(t.completed.length,2);assert.equal(t.cancelled,1);
+ assert.equal(Date.parse(t.completed[0].endedAt)-Date.parse(t.completed[0].startedAt),1200);
+ assert.equal(Date.parse(t.completed[1].endedAt)-Date.parse(t.completed[1].startedAt),2300);
+ assert.ok(Date.parse(t.completed[1].startedAt)>Date.parse(t.completed[0].endedAt));
+});
