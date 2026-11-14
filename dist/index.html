@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8f5"><meta name="description" content="A simple, private headache and migraine diary. Log an episode, notice patterns, and bring a clear record to your next appointment.">
-  <title>Tracking Diary — A little clarity</title><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./style.css">
+  <title>Tracking Diary — A little clarity</title><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./style.css?v=3">
 </head>
 <body>
   <aside class="sidebar">
@@ -27,6 +27,7 @@
     <form id="entry-form">
       <div class="form-body">
         <p id="recorded-timing" class="recorded-timing" hidden></p>
+        <details id="recorded-bursts" class="burst-details" hidden><summary>Show burst times</summary><div id="recorded-burst-list"></div></details>
         <fieldset><legend>What are you experiencing?</legend><div class="segmented" id="kind-options"><button type="button" data-kind="headache" aria-pressed="true">Headache</button><button type="button" data-kind="migraine" aria-pressed="false">Migraine</button></div></fieldset>
         <fieldset><legend>How intense is it? <span class="required">Required</span></legend><div class="severity-options" id="severity-options"><button type="button" data-severity="1" aria-pressed="false"><span class="severity-dot mild"></span><strong>Mild</strong><small>Normal activity</small></button><button type="button" data-severity="2" aria-pressed="false"><span class="severity-dot moderate"></span><strong>Moderate</strong><small>Activity is harder</small></button><button type="button" data-severity="3" aria-pressed="false"><span class="severity-dot severe"></span><strong>Severe</strong><small>Activity is prevented</small></button></div></fieldset>
         <details id="timing-details" open><summary>Adjust timing</summary><fieldset><legend>Timing</legend><p class="field-hint" id="timing-hint">The start time is filled in for you. Adjust it if needed.</p><label for="started-at">Started</label><div class="time-row"><input type="datetime-local" id="started-at" step="1" required><button type="button" class="button subtle" id="start-now">Now</button></div><span class="field-label">Quick duration</span><div class="chips" id="duration-options"><button type="button" data-duration="ongoing" aria-pressed="true">Still ongoing</button><button type="button" data-duration="15" aria-pressed="false">15m</button><button type="button" data-duration="30" aria-pressed="false">30m</button><button type="button" data-duration="60" aria-pressed="false">1h</button><button type="button" data-duration="120" aria-pressed="false">2h</button><button type="button" data-duration="240" aria-pressed="false">4h</button><button type="button" data-duration="custom" aria-pressed="false">Custom</button></div><div id="end-field" hidden><label for="ended-at">Ended</label><input type="datetime-local" id="ended-at" step="1"></div></fieldset></details>
@@ -44,6 +45,6 @@
   </dialog>
   <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Delete this episode?</h2><p>This removes it from your diary. You can undo the deletion until you leave this page.</p><div class="confirm-actions"><button class="button subtle" id="cancel-delete">Keep episode</button><button class="button danger" id="confirm-delete">Delete episode</button></div></dialog>
   <div id="toast" role="status" hidden></div><input type="file" id="import-file" accept="application/json,.json" hidden>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=3"></script>
 </body>
 </html>
