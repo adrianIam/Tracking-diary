@@ -11,7 +11,7 @@ A minimal, responsive headache and migraine diary. The default **Record** tab ha
 - Search and type / date filters, editing, deletion with undo.
 - Descriptive summaries for 30, 90, or 365 days; printable episode details.
 - Stacked duration chart for the last 30 local calendar days, with intensity colours and pain-free gaps excluded.
-- Stacked hourly onset frequency for the selected period: each burst counts once; manual episodes count once at their start. Both charts include accessible data tables.
+- Stacked onset frequency in 72 twenty-minute buckets covering the full day for the selected period: each burst counts once; manual episodes count once at their start. Both charts include accessible data tables.
 - CSV export and versioned JSON backup / merge import.
 - Offline app-shell caching and an installable web manifest where supported.
 - No analytics, external fonts, runtime dependencies, or server upload of diary records.

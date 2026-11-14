@@ -1,4 +1,4 @@
-import {renderInsightCharts} from './charts.js?v=5';
+import {renderInsightCharts} from './charts.js?v=7';
 import {createHoldRecorder,formatHeldTime} from './recorder.js?v=5';
 import {STORAGE_KEY,SCHEMA_VERSION,createBurstSession,durationMs,TYPES,SEVERITIES,durationMinutes,formatDuration,validateEntry,parseBackup,mergeEntries,toCSV,summarise} from './model.js?v=5';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
