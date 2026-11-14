@@ -1,6 +1,6 @@
 # Tracking Diary
 
-A minimal, responsive headache and migraine diary. Quick logging comes first: the start time is filled in automatically, severity is one tap, and duration presets log completed episodes ending now. Ongoing episodes keep their timestamps across reloads and can be ended later.
+A minimal, responsive headache and migraine diary. The default **Record** tab has one hold-to-record button: press and hold to time an episode, then release to choose headache or migraine and a severity. Other details and timing adjustments are optional. Mouse, touch, Space, and Enter are supported; interrupted holds are cancelled. A released recording stays available until submitted or discarded during the current visit. Nothing is saved until you submit. Quick logging comes first: the start time is filled in automatically, severity is one tap, and duration presets log completed episodes ending now. Ongoing episodes keep their timestamps across reloads and can be ended later.
 
 ## Features
 
@@ -44,6 +44,7 @@ dist/
   style.css            Responsive layout and print styles
   app.js               Views, form interactions, local persistence adapter
   model.js             Record validation, calculations, backups and CSV
+  recorder.js          Pointer / keyboard hold lifecycle and precise timer display
   sw.js                App-shell caching (no health records)
   manifest.webmanifest Home-screen metadata
   icon.svg             Local app icon
@@ -62,8 +63,8 @@ The form’s severity guide and base observations were informed by the [Royal Ch
 
 ## Deployment
 
-Host the contents of `dist/` on any HTTPS static host. The `.openai/hosting.json` file configures the private Sites deployment for this project. Changing the deployment origin does not move browser-local entries; export and import a backup when migrating.
+GitHub Pages deploys `dist/` automatically from `main` through `.github/workflows/pages.yml`. All asset paths and service-worker scope are relative for repository-subpath hosting. Host the contents of `dist/` on any HTTPS static host. The `.openai/hosting.json` file configures the private Sites deployment for this project. Changing the deployment origin does not move browser-local entries; export and import a backup when migrating.
 
 ## Verification
 
-`npm test` covers ongoing duration, invalid timing, backup round trips, invalid imports, merge conflict handling, CSV escaping, and summary calculations. JavaScript syntax checks are also run. Interactive browser and mobile layout QA were unavailable in the development environment because its preview relay was missing, so those flows still need a browser pass on the deployment.
+`npm test` also covers precise pointer/keyboard holds, repeated keys, multi-pointer input, cancellation on interruption, and late release protection. `npm test` covers ongoing duration, invalid timing, backup round trips, invalid imports, merge conflict handling, CSV escaping, and summary calculations. JavaScript syntax checks are also run. Interactive browser and mobile layout QA were unavailable in the development environment because its preview relay was missing, so those flows still need a browser pass on the deployment.

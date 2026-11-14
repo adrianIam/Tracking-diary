@@ -42,7 +42,7 @@ export function mergeEntries(current, incoming) {
 export function toCSV(entries) {
   const cell=v=>`"${String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')}"`;
   const rows=[['Type','Start (ISO)','End (ISO)','Duration (minutes)','Severity (1–3)','Triggers','Symptoms','Relief','Medication / dose','Activity impact','Notes']];
-  entries.forEach(e=>rows.push([e.kind,e.startedAt,e.endedAt,e.endedAt ? durationMinutes(e) : '',e.severity,e.triggers.join('; '),e.symptoms.join('; '),e.relief.join('; '),e.medication,e.impact,e.notes]));
+  entries.forEach(e=>rows.push([e.kind,e.startedAt,e.endedAt,e.endedAt ? Number(((Date.parse(e.endedAt)-Date.parse(e.startedAt))/60000).toFixed(4)) : '',e.severity,e.triggers.join('; '),e.symptoms.join('; '),e.relief.join('; '),e.medication,e.impact,e.notes]));
   return rows.map(r=>r.map(cell).join(',')).join('\r\n');
 }
 export function summarise(entries, since, now=Date.now()) {
