@@ -1,5 +1,5 @@
-const CACHE='tracking-diary-shell-v4';
-const FILES=['./','./index.html','./style.css?v=4','./app.js?v=4','./model.js?v=4','./charts.js?v=4','./recorder.js?v=4','./icon.svg','./manifest.webmanifest'];
+const CACHE='tracking-diary-shell-v5';
+const FILES=['./','./index.html','./style.css?v=5','./app.js?v=5','./model.js?v=5','./charts.js?v=5','./recorder.js?v=5','./icon.svg','./manifest.webmanifest'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('tracking-diary-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{
