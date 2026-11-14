@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f8f5"><meta name="description" content="A simple, private headache and migraine diary. Log an episode, notice patterns, and bring a clear record to your next appointment.">
+  <title>Tracking Diary — A little clarity</title><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a href="#diary" class="brand"><span class="brand-symbol">✳</span><span>tracking<span class="brand-light">diary</span><span class="brand-dot">.</span></span></a>
+    <span class="eyebrow nav-label">YOUR SPACE</span>
+    <nav aria-label="Main navigation">
+      <a href="#diary" data-page="diary"><span data-icon="book"></span> My diary</a>
+      <a href="#insights" data-page="insights"><span data-icon="chart"></span> Insights</a>
+      <a href="#settings" data-page="settings"><span data-icon="settings"></span> Data & settings</a>
+    </nav>
+    <div class="sidebar-bottom"><span class="small-leaf">◒</span><p>A little less to remember.<br>A little more clarity.</p><div class="privacy"><span data-icon="shield"></span> Stored on this device</div></div>
+  </aside>
+  <main>
+    <header class="topbar"><span id="today"></span><span class="personal-label"><i></i> Your personal health journal</span></header>
+    <div id="page" class="page"></div>
+    <footer class="page-footer"><span>Small observations. A clearer picture.</span><span>Made for your everyday.</span></footer>
+  </main>
+  <dialog id="entry-dialog" aria-labelledby="entry-title">
+    <div class="dialog-heading"><div><span class="eyebrow">A MOMENT TO CHECK IN</span><h2 id="entry-title">Log an episode</h2></div><button class="icon-button" id="close-dialog" aria-label="Close entry form">✕</button></div>
+    <form id="entry-form">
+      <div class="form-body">
+        <fieldset><legend>What are you experiencing?</legend><div class="segmented" id="kind-options"><button type="button" data-kind="headache" aria-pressed="true">Headache</button><button type="button" data-kind="migraine" aria-pressed="false">Migraine</button></div></fieldset>
+        <fieldset><legend>How intense is it? <span class="required">Required</span></legend><div class="severity-options" id="severity-options"><button type="button" data-severity="1" aria-pressed="false"><span class="severity-dot mild"></span><strong>Mild</strong><small>Normal activity</small></button><button type="button" data-severity="2" aria-pressed="false"><span class="severity-dot moderate"></span><strong>Moderate</strong><small>Activity is harder</small></button><button type="button" data-severity="3" aria-pressed="false"><span class="severity-dot severe"></span><strong>Severe</strong><small>Activity is prevented</small></button></div></fieldset>
+        <fieldset><legend>Timing</legend><p class="field-hint" id="timing-hint">The start time is filled in for you. Adjust it if needed.</p><label for="started-at">Started</label><div class="time-row"><input type="datetime-local" id="started-at" required><button type="button" class="button subtle" id="start-now">Now</button></div><span class="field-label">Quick duration</span><div class="chips" id="duration-options"><button type="button" data-duration="ongoing" aria-pressed="true">Still ongoing</button><button type="button" data-duration="15" aria-pressed="false">15m</button><button type="button" data-duration="30" aria-pressed="false">30m</button><button type="button" data-duration="60" aria-pressed="false">1h</button><button type="button" data-duration="120" aria-pressed="false">2h</button><button type="button" data-duration="240" aria-pressed="false">4h</button><button type="button" data-duration="custom" aria-pressed="false">Custom</button></div><div id="end-field" hidden><label for="ended-at">Ended</label><input type="datetime-local" id="ended-at"></div></fieldset>
+        <details id="more-details"><summary>Add a little detail <span>Triggers, relief, symptoms & notes</span></summary>
+          <fieldset><legend>Possible triggers</legend><p class="field-hint">Your observations, without assuming a cause.</p><div class="chips" id="trigger-options"></div><label for="other-trigger">Other trigger</label><input id="other-trigger" maxlength="200" placeholder="Anything else you noticed"></fieldset>
+          <fieldset><legend>Symptoms</legend><div class="chips" id="symptom-options"></div></fieldset>
+          <fieldset><legend>What did you try for relief?</legend><div class="chips" id="relief-options"></div><label for="medication">Medication & dose</label><input id="medication" maxlength="1000" placeholder="Name, dose and time, if taken"></fieldset>
+          <label for="impact">What were you able to do?</label><select id="impact"><option value="">Choose activity impact</option><option>Normal activities</option><option>Activities with difficulty</option><option>Stopped some activities</option><option>Unable to do normal activities</option></select>
+          <label for="notes">Notes</label><textarea id="notes" rows="3" maxlength="10000" placeholder="Location of pain, what helped, or anything to remember…"></textarea>
+        </details>
+        <p id="form-error" class="error" role="alert"></p>
+      </div>
+      <div class="dialog-actions"><span>Only saved on this device</span><button type="submit" class="button primary" id="save-entry">Save episode <span>↗</span></button></div>
+    </form>
+  </dialog>
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Delete this episode?</h2><p>This removes it from your diary. You can undo the deletion until you leave this page.</p><div class="confirm-actions"><button class="button subtle" id="cancel-delete">Keep episode</button><button class="button danger" id="confirm-delete">Delete episode</button></div></dialog>
+  <div id="toast" role="status" hidden></div><input type="file" id="import-file" accept="application/json,.json" hidden>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

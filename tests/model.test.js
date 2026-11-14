@@ -1,0 +1,12 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {validateEntry,parseBackup,mergeEntries,toCSV,durationMinutes,summarise} from '../dist/model.js';
+const now=Date.parse('2026-11-14T10:00:00Z');
+const sample=(overrides={})=>({id:'a',trackerType:'headache',kind:'migraine',severity:2,startedAt:'2026-11-14T08:00:00Z',endedAt:'2026-11-14T09:00:00Z',triggers:['Stress'],symptoms:[],relief:['Rest'],notes:'',medication:'',impact:'',createdAt:'2026-11-14T09:00:00Z',updatedAt:'2026-11-14T09:00:00Z',...overrides});
+test('ongoing duration derives from persisted timestamps',()=>assert.equal(durationMinutes(sample({endedAt:null}),now),120));
+test('rejects future timestamps and end preceding start',()=>{assert.throws(()=>validateEntry(sample({startedAt:'2026-11-15T08:00:00Z'}),now),/Start/);assert.throws(()=>validateEntry(sample({endedAt:'2026-11-14T07:00:00Z'}),now),/End/);});
+test('backup preserves all episode data and strips unknown properties',()=>{const e=sample({notes:'Line one\nLine two',medication:'Example only',extra:'untrusted'});const out=parseBackup(JSON.stringify({schemaVersion:1,entries:[e]}),now);assert.equal(out[0].notes,e.notes);assert.equal(out[0].medication,e.medication);assert.equal(out[0].extra,undefined);});
+test('malformed backup, duplicate IDs, and multiple running episodes fail without merging',()=>{assert.throws(()=>parseBackup('{bad',now));assert.throws(()=>parseBackup(JSON.stringify({schemaVersion:1,entries:[sample(),sample()]}),now),/duplicate/);assert.throws(()=>mergeEntries([sample({endedAt:null})],[sample({id:'b',endedAt:null})]),/ongoing/);});
+test('merge is idempotent and latest update wins',()=>{const old=sample(), fresh=sample({notes:'updated',updatedAt:'2026-11-14T09:30:00Z'});assert.deepEqual(mergeEntries([old],[fresh]),[fresh]);assert.deepEqual(mergeEntries([fresh],[old,fresh]),[fresh]);});
+test('CSV escapes quotes, newlines and formula-like health notes',()=>{const csv=toCSV([sample({notes:'=HYPERLINK("example")\nnext'})]);assert.ok(csv.includes('"\'=HYPERLINK(""example"")\nnext"'));assert.ok(csv.includes('"60"'));});
+test('summary excludes ongoing episodes from mean duration',()=>{const s=summarise([sample(),sample({id:'b',endedAt:null})],now-86400000,now);assert.equal(s.avgMinutes,60);assert.equal(s.days,1);assert.equal(s.list.length,2);assert.deepEqual(s.topTriggers,[['Stress',2]]);});
